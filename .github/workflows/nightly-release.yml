@@ -1,0 +1,74 @@
+name: Nightly-Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "repo"
+        default: "flashinfer-ai/flashinfer"
+      branch:
+        description: "branch"
+        default: "main"
+
+env:
+  TORCH_CUDA_ARCH_LIST: "7.5 8.0 8.9 9.0+PTX"
+
+jobs:
+  build:
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10"]
+        cuda: ["12.4"]
+        torch: ["2.4"]
+    runs-on: [self-hosted]
+    steps:
+      - run: |
+          rm -rf flashinfer
+          git clone -b ${{ inputs.branch }} --recurse-submodules --depth=1 https://github.com/${{ inputs.repo }}
+          pushd flashinfer
+          sed -i 's/+cu/\.cu/g' scripts/run-ci-build-wheel.sh
+          sed -i 's|/ci-cache|/opt/dlami/nvme/flashinfer/github|g' scripts/run-ci-build-wheel.sh
+          sed -i '/mkdir -p "\$CONDA_pkgs_dirs" "\$XDG_CACHE_HOME"/d' scripts/run-ci-build-wheel.sh
+          version="$(cat version.txt)"+"$(git rev-parse HEAD | cut -c1-7)"
+          echo "VERSION=$version" >> $GITHUB_ENV
+          echo "version=$version" >> $GITHUB_OUTPUT
+        id: get_version
+      - name: Build wheel
+        run: |
+          pushd flashinfer
+          docker run --rm -t \
+              -v "$(pwd)":/app \
+              -e FLASHINFER_CI_PYTHON_VERSION=${{ matrix.python }} \
+              -e FLASHINFER_CI_CUDA_VERSION=${{ matrix.cuda }} \
+              -e FLASHINFER_CI_TORCH_VERSION=${{ matrix.torch }} \
+              -e FLASHINFER_BUILD_VERSION=${{ env.VERSION }} \
+              -e TORCH_CUDA_ARCH_LIST="$TORCH_CUDA_ARCH_LIST" \
+              -e MAX_JOBS=192 \
+              --user $(id -u):$(id -g) \
+              pytorch/manylinux-builder:cuda${{ matrix.cuda }} \
+              bash /app/scripts/run-ci-build-wheel.sh
+          popd
+        timeout-minutes: 30
+      - run: du -h flashinfer/python/dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-cuda${{ matrix.cuda }}-torch${{ matrix.torch }}-python${{ matrix.python }}
+          path: flashinfer/python/dist/*
+
+  release:
+    needs: build
+    runs-on: [self-hosted]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: python/dist/
+          merge-multiple: true
+          pattern: wheel-*
+      - run: ls -lah python/dist/
+      - uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          files: python/dist/flashinfer*.whl
