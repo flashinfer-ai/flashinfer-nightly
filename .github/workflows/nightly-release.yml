@@ -9,6 +9,8 @@ on:
       branch:
         description: "branch"
         default: "main"
+  schedule:
+    - cron: '0 2 * * *'
 
 env:
   TORCH_CUDA_ARCH_LIST: "7.5 8.0 8.9 9.0+PTX"
@@ -20,8 +22,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10"]
-        cuda: ["12.4"]
+        python: ["3.10", "3.11", "3.12"]
+        cuda: ["12.1", "12.4"]
         torch: ["2.4"]
     runs-on: [self-hosted]
     steps:
