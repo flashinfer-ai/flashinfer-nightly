@@ -85,6 +85,9 @@ jobs:
           merge-multiple: true
           pattern: wheel-*
       - run: ls -lah python/dist/
+      - run: |
+          version="${{ needs.build.outputs.version }}"
+          find python/dist -type f ! -name "*${version}*" -delete
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.build.outputs.version }}
