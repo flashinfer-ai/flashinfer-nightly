@@ -27,9 +27,24 @@ jobs:
         torch: ["2.4"]
     runs-on: [self-hosted]
     steps:
+      - name: Set default values
+        id: set_defaults
+        run: |
+          echo "[INFO] Event name is '${{ github.event_name }}'"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "REPO=${{ inputs.repo }}" >> $GITHUB_ENV
+            echo "BRANCH=${{ inputs.branch }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "REPO=flashinfer-ai/flashinfer" >> $GITHUB_ENV
+            echo "BRANCH=main" >> $GITHUB_ENV
+          else
+            echo "[ERROR] Unsupported event '${{ github.event_name }}'." >&2
+            exit 1
+          fi
+
       - run: |
           rm -rf flashinfer
-          git clone -b ${{ inputs.branch }} --recurse-submodules --depth=1 https://github.com/${{ inputs.repo }}
+          git clone -b ${{ env.BRANCH }} --recurse-submodules --depth=1 https://github.com/${{ env.REPO }}
           pushd flashinfer
           sed -i 's/+cu/\.cu/g' scripts/run-ci-build-wheel.sh
           sed -i 's|/ci-cache|/opt/dlami/nvme/flashinfer/github|g' scripts/run-ci-build-wheel.sh
