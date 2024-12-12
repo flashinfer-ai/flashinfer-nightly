@@ -69,11 +69,11 @@ jobs:
               bash /app/scripts/run-ci-build-wheel.sh
           popd
         timeout-minutes: 30
-      - run: du -h flashinfer/python/dist/*
+      - run: du -h flashinfer/dist/*
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-cuda${{ matrix.cuda }}-torch${{ matrix.torch }}-python${{ matrix.python }}
-          path: flashinfer/python/dist/*
+          path: flashinfer/dist/*
 
   release:
     needs: build
@@ -81,14 +81,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: python/dist/
+          path: dist/
           merge-multiple: true
           pattern: wheel-*
-      - run: ls -lah python/dist/
+      - run: ls -lah dist/
       - run: |
           version="${{ needs.build.outputs.version }}"
-          find python/dist -type f ! -name "*${version}*" -delete
+          find dist -type f ! -name "*${version}*" -delete
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.build.outputs.version }}
-          files: python/dist/flashinfer*.whl
+          files: dist/flashinfer*.whl
