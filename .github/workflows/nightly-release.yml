@@ -22,7 +22,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.11", "3.12"]
         cuda: ["12.1", "12.4"]
         torch: ["2.4"]
     runs-on: [self-hosted]
@@ -58,7 +57,6 @@ jobs:
           pushd flashinfer
           docker run --rm -t \
               -v "$(pwd)":/app \
-              -e FLASHINFER_CI_PYTHON_VERSION=${{ matrix.python }} \
               -e FLASHINFER_CI_CUDA_VERSION=${{ matrix.cuda }} \
               -e FLASHINFER_CI_TORCH_VERSION=${{ matrix.torch }} \
               -e FLASHINFER_BUILD_VERSION=${{ env.VERSION }} \
@@ -72,7 +70,7 @@ jobs:
       - run: du -h flashinfer/dist/*
       - uses: actions/upload-artifact@v4
         with:
-          name: wheel-cuda${{ matrix.cuda }}-torch${{ matrix.torch }}-python${{ matrix.python }}
+          name: wheel-cuda${{ matrix.cuda }}-torch${{ matrix.torch }}
           path: flashinfer/dist/*
 
   release:
