@@ -45,10 +45,9 @@ jobs:
           rm -rf flashinfer
           git clone -b ${{ env.BRANCH }} --recurse-submodules --depth=1 https://github.com/${{ env.REPO }}
           pushd flashinfer
-          sed -i 's/+cu/\.cu/g' scripts/run-ci-build-wheel.sh
           sed -i 's|/ci-cache|/opt/dlami/nvme/flashinfer/github|g' scripts/run-ci-build-wheel.sh
           sed -i '/mkdir -p "\$CONDA_pkgs_dirs" "\$XDG_CACHE_HOME"/d' scripts/run-ci-build-wheel.sh
-          version="$(cat version.txt)"+"$(git rev-parse HEAD | cut -c1-7)"
+          version="$(cat version.txt)"+"$(git rev-parse HEAD | cut -c1-7)".cu${{ matrix.cuda }}torch${{ matrix.torch }}
           echo "VERSION=$version" >> $GITHUB_ENV
           echo "version=$version" >> $GITHUB_OUTPUT
         id: get_version
@@ -85,8 +84,10 @@ jobs:
       - run: ls -lah dist/
       - run: |
           version="${{ needs.build.outputs.version }}"
-          find dist -type f ! -name "*${version}*" -delete
+          tag_version=$(echo $version | sed 's/\.cu[0-9.]*torch[0-9.]*$//')
+          echo "TAG_VERSION=$tag_version" >> $GITHUB_ENV
+          find dist -type f ! -name "*${tag_version}*" -delete
       - uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.version }}
+          tag_name: ${{ env.TAG_VERSION }}
           files: dist/flashinfer*.whl
