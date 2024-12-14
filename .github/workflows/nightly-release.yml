@@ -91,3 +91,35 @@ jobs:
         with:
           tag_name: ${{ env.TAG_VERSION }}
           files: dist/flashinfer*.whl
+
+      - name: Update index files
+        env:
+          WHL_TOKEN: ${{ secrets.WHL_TOKEN }}
+        run: |
+          git clone https://oauth2:${WHL_TOKEN}@github.com/flashinfer-ai/whl
+          cd whl
+
+          tag_version=${{ env.TAG_VERSION }}
+          VERSION=$(echo $tag_version | cut -d'+' -f1)
+          COMMIT=$(echo $tag_version | cut -d'+' -f2)
+
+          for cuda in "12.1" "12.4"; do
+            cuda_path=$(echo $cuda | tr -d '.')
+            CUDAVER=$cuda
+            echo "Updating index for CUDA $cuda (path: $cuda_path)"
+            sed -i "s|<a href=\"[^\"]*flashinfer-[^\"]*\.whl\">|<a href=\"https://github.com/flashinfer-ai/flashinfer-nightly/releases/download/${VERSION}%2B${COMMIT}/flashinfer-${VERSION}+${COMMIT}.cu${CUDAVER}torch2.4-cp38-abi3-linux_x86_64.whl\">|g" nightly/cu${cuda_path}/torch2.4/flashinfer/index.html
+          done
+
+          if ! git status | grep -q 'modified:'; then
+            echo "No changes detected, skipping commit"
+            exit 0
+          fi
+
+          # Configure git
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Commit and push changes
+          git add .
+          git commit -m "Update nightly wheel links to version ${VERSION}+${COMMIT}"
+          git push
