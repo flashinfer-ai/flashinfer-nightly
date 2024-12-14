@@ -85,8 +85,9 @@ jobs:
       - run: |
           version="${{ needs.build.outputs.version }}"
           tag_version=$(echo $version | sed 's/\.cu[0-9.]*torch[0-9.]*$//')
+          echo "TAG_VERSION=$tag_version" >> $GITHUB_ENV
           find dist -type f ! -name "*${tag_version}*" -delete
       - uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${tag_version}
+          tag_name: ${{ env.TAG_VERSION }}
           files: dist/flashinfer*.whl
