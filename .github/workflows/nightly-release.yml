@@ -45,10 +45,9 @@ jobs:
           rm -rf flashinfer
           git clone -b ${{ env.BRANCH }} --recurse-submodules --depth=1 https://github.com/${{ env.REPO }}
           pushd flashinfer
-          sed -i 's/+cu/\.cu/g' scripts/run-ci-build-wheel.sh
           sed -i 's|/ci-cache|/opt/dlami/nvme/flashinfer/github|g' scripts/run-ci-build-wheel.sh
           sed -i '/mkdir -p "\$CONDA_pkgs_dirs" "\$XDG_CACHE_HOME"/d' scripts/run-ci-build-wheel.sh
-          version="$(cat version.txt)"+"$(git rev-parse HEAD | cut -c1-7)"
+          version="$(cat version.txt)"+"$(git rev-parse HEAD | cut -c1-7)".cu${{ matrix.cuda }}torch${{ matrix.torch }}
           echo "VERSION=$version" >> $GITHUB_ENV
           echo "version=$version" >> $GITHUB_OUTPUT
         id: get_version
