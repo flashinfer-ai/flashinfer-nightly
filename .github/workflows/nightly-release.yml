@@ -84,8 +84,9 @@ jobs:
       - run: ls -lah dist/
       - run: |
           version="${{ needs.build.outputs.version }}"
-          find dist -type f ! -name "*${version}*" -delete
+          tag_version=$(echo $version | sed 's/\.cu[0-9.]*torch[0-9.]*$//')
+          find dist -type f ! -name "*${tag_version}*" -delete
       - uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.version }}
+          tag_name: $tag_version
           files: dist/flashinfer*.whl
