@@ -38,20 +38,16 @@ jobs:
             echo "[ERROR] Unsupported event '${{ github.event_name }}'." >&2
             exit 1
           fi
-
       - name: Prepare repo
         run: |
           rm -rf flashinfer
           git clone -b ${{ env.BRANCH }} --recurse-submodules --depth=1 https://github.com/${{ env.REPO }}
-          pushd flashinfer
-          sed -i 's|/ci-cache|/opt/dlami/nvme/flashinfer/github|g' scripts/run-ci-build-wheel.sh
-          sed -i '/mkdir -p "\$CONDA_pkgs_dirs" "\$XDG_CACHE_HOME"/d' scripts/run-ci-build-wheel.sh
-          popd
       - name: Build wheel
         run: |
           pushd flashinfer
           docker run --rm -t \
               -v "$(pwd)":/app \
+              -e FLASHINFER_CI_CACHE=/opt/dlami/nvme/flashinfer/github \
               -e FLASHINFER_CI_CUDA_VERSION=${{ matrix.cuda }} \
               -e FLASHINFER_CI_TORCH_VERSION=${{ matrix.torch }} \
               -e TORCH_CUDA_ARCH_LIST="$TORCH_CUDA_ARCH_LIST" \
