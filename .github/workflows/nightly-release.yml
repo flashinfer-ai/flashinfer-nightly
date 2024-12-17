@@ -41,6 +41,11 @@ jobs:
             exit 1
           fi
 
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
       - run: |
           rm -rf flashinfer
           git clone -b ${{ env.BRANCH }} --recurse-submodules --depth=1 https://github.com/${{ env.REPO }}
