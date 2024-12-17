@@ -41,7 +41,10 @@ jobs:
       - name: Prepare repo
         run: |
           rm -rf flashinfer
-          git clone -b ${{ env.BRANCH }} --recurse-submodules --depth=1 https://github.com/${{ env.REPO }}
+          git clone -b ${{ env.BRANCH }} https://github.com/${{ env.REPO }}
+          pushd flashinfer
+          git submodule update --init --depth 1 3rdparty/cutlass
+          popd
       - name: Build wheel
         run: |
           pushd flashinfer
