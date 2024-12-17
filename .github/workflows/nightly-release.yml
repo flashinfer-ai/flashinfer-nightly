@@ -38,16 +38,13 @@ jobs:
             echo "[ERROR] Unsupported event '${{ github.event_name }}'." >&2
             exit 1
           fi
-      - name: Prepare repo
-        run: |
-          rm -rf flashinfer
-          git clone -b ${{ env.BRANCH }} https://github.com/${{ env.REPO }}
-          pushd flashinfer
-          git submodule update --init --depth 1 3rdparty/cutlass
-          popd
+      - uses: actions/checkout@v2
+        with:
+          repository: https://github.com/${{ env.REPO }}
+          ref: ${{ env.BRANCH }}
+          submodules: true
       - name: Build wheel
         run: |
-          pushd flashinfer
           docker run --rm -t \
               -v "$(pwd)":/app \
               -e FLASHINFER_CI_CACHE=/opt/dlami/nvme/flashinfer/github \
@@ -58,13 +55,12 @@ jobs:
               --user $(id -u):$(id -g) \
               pytorch/manylinux-builder:cuda${{ matrix.cuda }} \
               bash /app/scripts/run-ci-build-wheel.sh
-          popd
         timeout-minutes: 30
-      - run: du -h flashinfer/dist/*
+      - run: du -h dist/*
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-cuda${{ matrix.cuda }}-torch${{ matrix.torch }}
-          path: flashinfer/dist/*
+          path: dist/*
 
   release:
     needs: build
