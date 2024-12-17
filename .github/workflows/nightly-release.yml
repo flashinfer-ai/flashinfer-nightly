@@ -17,8 +17,6 @@ env:
 
 jobs:
   build:
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
     strategy:
       fail-fast: false
       matrix:
@@ -40,53 +38,45 @@ jobs:
             echo "[ERROR] Unsupported event '${{ github.event_name }}'." >&2
             exit 1
           fi
-
-      - run: |
-          rm -rf flashinfer
-          git clone -b ${{ env.BRANCH }} --recurse-submodules --depth=1 https://github.com/${{ env.REPO }}
-          pushd flashinfer
-          sed -i 's|/ci-cache|/opt/dlami/nvme/flashinfer/github|g' scripts/run-ci-build-wheel.sh
-          sed -i '/mkdir -p "\$CONDA_pkgs_dirs" "\$XDG_CACHE_HOME"/d' scripts/run-ci-build-wheel.sh
-          version="$(cat version.txt)"+"$(git rev-parse HEAD | cut -c1-7)".cu${{ matrix.cuda }}torch${{ matrix.torch }}
-          echo "VERSION=$version" >> $GITHUB_ENV
-          echo "version=$version" >> $GITHUB_OUTPUT
-        id: get_version
+      - uses: actions/checkout@v2
+        with:
+          repository: https://github.com/${{ env.REPO }}
+          ref: ${{ env.BRANCH }}
+          submodules: true
       - name: Build wheel
         run: |
-          pushd flashinfer
           docker run --rm -t \
               -v "$(pwd)":/app \
+              -e FLASHINFER_CI_CACHE=/opt/dlami/nvme/flashinfer/github \
               -e FLASHINFER_CI_CUDA_VERSION=${{ matrix.cuda }} \
               -e FLASHINFER_CI_TORCH_VERSION=${{ matrix.torch }} \
-              -e FLASHINFER_BUILD_VERSION=${{ env.VERSION }} \
+              -e FLASHINFER_GIT_SHA="g$(git rev-parse HEAD | cut -c1-7)" \
               -e TORCH_CUDA_ARCH_LIST="$TORCH_CUDA_ARCH_LIST" \
               -e MAX_JOBS=192 \
               --user $(id -u):$(id -g) \
               pytorch/manylinux-builder:cuda${{ matrix.cuda }} \
               bash /app/scripts/run-ci-build-wheel.sh
-          popd
         timeout-minutes: 30
-      - run: du -h flashinfer/dist/*
+      - run: du -h dist/*
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-cuda${{ matrix.cuda }}-torch${{ matrix.torch }}
-          path: flashinfer/dist/*
+          path: dist/*
 
   release:
     needs: build
     runs-on: [self-hosted]
     steps:
+      - run: rm -r dist
       - uses: actions/download-artifact@v4
         with:
           path: dist/
           merge-multiple: true
           pattern: wheel-*
-      - run: ls -lah dist/
       - run: |
-          version="${{ needs.build.outputs.version }}"
-          tag_version=$(echo $version | sed 's/\.cu[0-9.]*torch[0-9.]*$//')
+          ls -lah dist/
+          tag_version=$(ls dist | sed 's/flashinfer-\(.*g[0-9a-f]\{7\}\).*/\1/' | uniq)
           echo "TAG_VERSION=$tag_version" >> $GITHUB_ENV
-          find dist -type f ! -name "*${tag_version}*" -delete
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.TAG_VERSION }}
