@@ -40,7 +40,7 @@ jobs:
           fi
       - uses: actions/checkout@v2
         with:
-          repository: https://github.com/${{ env.REPO }}
+          repository: ${{ env.REPO }}
           ref: ${{ env.BRANCH }}
           submodules: true
       - name: Build wheel
