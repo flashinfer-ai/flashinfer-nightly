@@ -23,8 +23,8 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.10"]
-        cuda: ["12.4"]
-        torch: ["2.5"]
+        cuda: ["12.4", "12.6"]
+        torch: ["2.5", "2.6"]
     runs-on: [self-hosted]
     steps:
       - name: Set default values
