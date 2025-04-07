@@ -25,6 +25,9 @@ jobs:
         python: ["3.10"]
         cuda: ["12.4", "12.6"]
         torch: ["2.5", "2.6"]
+        exclude:
+          - cuda: "12.6"
+            torch: "2.5"
     runs-on: [self-hosted]
     steps:
       - name: Set default values
@@ -69,6 +72,9 @@ jobs:
           CUDA_VERSION: ${{ steps.set_torch_and_cuda_version.outputs.CUDA_VERSION }}
           BUILDER_IMAGE: ${{ ((steps.set_torch_and_cuda_version.outputs.TORCH_VERSION == 206 && steps.set_torch_and_cuda_version.outputs.CUDA_VERSION >= 1206) || steps.set_torch_and_cuda_version.outputs.TORCH_VERSION > 206) && 'pytorch/manylinux2_28-builder:cuda' || 'pytorch/manylinux-builder:cuda' }}${{ matrix.cuda }}
         run: |
+          echo "TORCH_VERSION: $TORCH_VERSION"
+          echo "CUDA_VERSION: $CUDA_VERSION"
+          echo "BUILDER_IMAGE: $BUILDER_IMAGE"
           pushd flashinfer
           docker run --rm -t \
               -v "$(pwd)":/app \
